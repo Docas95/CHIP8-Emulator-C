@@ -1,9 +1,20 @@
 #ifndef MAIN_H
 #define MAIN_H
+// includes
 
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <time.h>
+#include <SDL2/SDL.h>
 
+// macros
+
+#define ROM_DATA_ADDRESS 0x200
+#define FONTSET_START_ADDRESS 0x50
+#define FONTSET_SIZE 80
+
+// data structures
 struct Chip8{
         int8_t registers[16];           // 16 8-bit registers
         int8_t  memory[4096];           // 4096 bytes of memory
@@ -18,5 +29,7 @@ struct Chip8{
 
 };
 
-
+// prototypes
+void loadROM(char* filename);
+void initChip();
 #endif

@@ -1,10 +1,72 @@
-#include <stdio.h>
-#include <stdint.h>
-#include <SDL2/SDL.h>
-
 #include "main.h"
 
-int main(void){
+// global vars
+
+struct Chip8 chip;
+
+uint8_t fontset[FONTSET_SIZE] = {
+	0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+	0x20, 0x60, 0x20, 0x20, 0x70, // 1
+	0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
+	0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
+	0x90, 0x90, 0xF0, 0x10, 0x10, // 4
+	0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5	
+	0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
+	0xF0, 0x10, 0x20, 0x40, 0x40, // 7
+	0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
+	0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
+	0xF0, 0x90, 0xF0, 0x90, 0x90, // A
+	0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
+	0xF0, 0x80, 0x80, 0x80, 0xF0, // C
+	0xE0, 0x90, 0x90, 0x90, 0xE0, // D
+	0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
+	0xF0, 0x80, 0xF0, 0x80, 0x80  // F
+};
+
+int main(int argc, char* argv[]){
+	initChip();
+	
+	if(argc == 2){
+		loadROM(argv[1]);
+	} else {
+		printf("Correct program usage: ./Chip8 <rom_file>\n");
+		exit(1);
+	}
 
 	return 0;
 }
+
+// set up initial config
+void initChip(){
+	// place program counter at beginning of ROM instructions 
+	chip.program_counter = ROM_DATA_ADDRESS;
+	
+	// load fontset into memory
+	for(int i = 0; i < FONTSET_SIZE; i++){
+		chip.memory[i + FONTSET_START_ADDRESS] = fontset[i];
+	}
+	
+	// set random seed
+	srand(time(NULL));
+}
+
+// load instructions from ROM into memory
+void loadROM(char* filename){
+	// open file with read permissions
+	FILE* f = fopen(filename, "r");
+
+	if(!f){
+		printf("Invalid file\n");
+		exit(1);
+	}
+	
+	// insert data from ROM into memory byte by byte
+	int i = 0;
+	char tmp;
+	while((tmp = fgetc(f)) != EOF){
+		chip.memory[ROM_DATA_ADDRESS + i] = tmp;
+		i++;
+	}
+}
+
+
