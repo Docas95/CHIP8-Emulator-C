@@ -7,10 +7,10 @@ TARGET = Chip8
 LIBS = -lSDL2
 
 $(TARGET): $(OBJS)
-	$(CC) $(OBJS) -o $(TARGET)
+	$(CC) $(OBJS) -o $(TARGET) $(LIBS)
 
 main.o: main.c main.h
-	$(CC) $(CFLAGS) -c main.c $(LIBS)
+	$(CC) $(CFLAGS) -c main.c
 clean:
 	rm -f *.o $(TARGET)
 

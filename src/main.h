@@ -2,34 +2,61 @@
 #define MAIN_H
 // includes
 
+#include <SDL2/SDL.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <time.h>
-#include <SDL2/SDL.h>
 
 // macros
-
-#define ROM_DATA_ADDRESS 0x200
-#define FONTSET_START_ADDRESS 0x50
-#define FONTSET_SIZE 80
+#define FONT_SIZE 80
+#define FONT_START_ADDRESS 0x50
+#define SCREEN_WIDTH 640
+#define SCREEN_HEIGHT 320
+#define ROWS 32
+#define COLUMNS 64
+#define ROM_START_ADDRESS 0x200
 
 // data structures
 struct Chip8{
-        int8_t registers[16];           // 16 8-bit registers
-        int8_t  memory[4096];           // 4096 bytes of memory
-        int16_t index_register;         // 16 bit index register
-        int16_t program_counter;        // 16 bit program counter
-        int16_t stack[16];              // 16 level stack
-        int8_t stack_pointer;           // 8 bit stack pointer
-        int8_t delay_timer;             // 8 bit delay timer
-        int8_t sound_timer;             // 8 bit sound timer
-        int8_t input_keys[16];          // 16 input keys
-        int32_t display_memory[32][64]; // graphics memory, 32 bits high, 64 bits wide
+        int8_t memory[4096];
+	int8_t display[ROWS * COLUMNS];
+	int16_t pc;
+	int16_t index; 
+	int16_t stack[16];
+	int8_t delay;
+	int8_t sound;
+	int8_t registers[16];
+	int16_t op_code;
+	int8_t draw_flag;
+};
 
+// constants
+const int8_t fontset[FONT_SIZE] = {
+	0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+	0x20, 0x60, 0x20, 0x20, 0x70, // 1
+	0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
+	0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
+	0x90, 0x90, 0xF0, 0x10, 0x10, // 4
+	0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
+	0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
+	0xF0, 0x10, 0x20, 0x40, 0x40, // 7
+	0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
+	0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
+	0xF0, 0x90, 0xF0, 0x90, 0x90, // A
+	0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
+	0xF0, 0x80, 0x80, 0x80, 0xF0, // C
+	0xE0, 0x90, 0x90, 0x90, 0xE0, // D
+	0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
+	0xF0, 0x80, 0xF0, 0x80, 0x80  // F
 };
 
 // prototypes
-void loadROM(char* filename);
-void initChip();
+void init_chip();
+void load_ROM(char* filename);
+void init_SDL();
+void quit_SDL();
+void fetch_instruction();
+void decode_instruction();
+void draw();
 #endif
