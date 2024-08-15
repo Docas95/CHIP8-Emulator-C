@@ -24,11 +24,13 @@ struct Chip8{
 	int16_t pc;
 	int16_t index; 
 	int16_t stack[16];
+	int8_t stack_pointer;
 	int8_t delay;
 	int8_t sound;
 	int8_t registers[16];
 	int16_t op_code;
 	int8_t draw_flag;
+	int8_t old_flag;
 };
 
 // constants

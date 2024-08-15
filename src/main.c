@@ -11,13 +11,17 @@ SDL_Rect square;
 
 int main(int argc, char* argv[]){
 	
-	if(argc >= 2){
+	if(argc == 3){
 		// set up CHIP8 data
-		init_chip();	
+		init_chip();
+		srand(time(NULL));	
 	} else {
-		printf("Correct program usage: ./Chip8 <rom_file>\n");
+		printf("Correct program usage: ./Chip8 <rom_file> <version (8/48)>\n");
 		exit(1);
 	}
+
+	// get CHIP version (8 or 48)
+	chip.old_flag = strcmp("8", argv[2]);
 
 	// read ROM data into memory
 	load_ROM(argv[1]);
@@ -39,8 +43,15 @@ int main(int argc, char* argv[]){
 			draw();
 			chip.draw_flag = 0;
 		}
+
+		// get user input
+		// TO-DO
+
+		// delay to emulate CHIP8 internal clock
+		SDL_Delay(5);
 	}
 
+	// close SDL
 	quit_SDL();
 	return 0;
 }
@@ -57,6 +68,9 @@ void init_chip(){
 
 	// set draw flag
 	chip.draw_flag = 0;
+
+	// point stack pointer to bottom of stack
+	chip.stack_pointer = 0;
 }
 
 // load content from ROM into memory
@@ -125,18 +139,16 @@ void fetch_instruction(){
 
 // decode and execute instruction from given opcode
 void decode_instruction(){
-	// opcode -> NNNN (each N is 4-bits)
-	// first N -> type of instruction
-	// second N -> register num
-	// third N -> register num
-	// fourth N -> 4-bit num
-	// third + fourth N -> 8-bit num
-	// second + third + fourth N -> 12-bit memory address
-	int16_t secondN = (0x0F00 & chip.op_code) >> 8;
-	int16_t thirdN = (0x00F0 & chip.op_code) >> 4;
-	int16_t fourthN = 0x000F & chip.op_code;
-	int16_t doubleN = 0x00FF & chip.op_code;
-	int16_t tripleN = 0x0FFF & chip.op_code;
+	// register
+	int16_t X = (0x0F00 & chip.op_code) >> 8;
+	// register
+	int16_t Y = (0x00F0 & chip.op_code) >> 4;
+	// 4 bit num
+	int16_t N = 0x000F & chip.op_code;
+	// 8 bit num
+	int16_t NN = 0x00FF & chip.op_code;
+	// 12 bit address
+	int16_t NNN = 0x0FFF & chip.op_code;
 
 	switch(0xF000 & chip.op_code){
 		case 0x0000:
@@ -146,45 +158,121 @@ void decode_instruction(){
 					memset(chip.display, 0, COLUMNS);
 					chip.draw_flag = 1;
 				break;
+				case 0x00EE:
+					// return from subroutine
+					chip.pc = chip.stack[chip.stack_pointer-1];
+					chip.stack_pointer--;				
+				break; 
 			}
 			break;
 		case 0x1000:
 			// jump
-			chip.pc = tripleN;			
+			chip.pc = NNN;			
 			break;
 		case 0x2000:
+			// call subroutine
+			chip.stack[chip.stack_pointer] = chip.pc;
+			chip.stack_pointer++;
+			chip.pc = NNN;
 			break;
 		case 0x3000:
+			// skip instruction if register VX = NNN
+			if(chip.registers[X] == NN)
+				chip.pc += 2;
 			break;
 		case 0x4000:
+			// skip instruction if register VX != NN
+			if(chip.registers[X] != NN)
+				chip.pc += 2;
 			break;
 		case 0x5000:
+			// skip instruction if register VX = register VY
+			if(chip.registers[X] == chip.registers[Y])
+				chip.pc += 2;
 			break;
 		case 0x6000:
-			// set register 
-			chip.registers[secondN] = (int8_t) doubleN;
+			// set VX register 
+			chip.registers[X] = (int8_t) NN;
 			break;
 		case 0x7000:
 			// add value to register VX
-			chip.registers[secondN] += (int8_t) doubleN;
+			chip.registers[X] += (int8_t) NN;
 			break;
 		case 0x8000:
+			switch(0x000F & chip.op_code){
+				case 0x0000:
+					// set VX to VY
+					chip.registers[X] = chip.registers[Y];
+					break;
+				case 0x0001:
+					// set VX to VX OR VY
+					chip.registers[X] |= chip.registers[Y];
+					break;
+				case 0x0002:
+					// set VX to VX AND VY
+					chip.registers[X] &= chip.registers[Y];
+					break;
+				case 0x0003:
+					// set VX to VX XOR VY
+					chip.registers[X] ^= chip.registers[Y];
+					break;
+				case 0x0004:
+					// set VX to VX + VY
+					chip.registers[X] += chip.registers[Y];
+					break;
+				case 0x0005:
+					// set VX to VX - VY
+					chip.registers[X] -= chip.registers[Y];
+					break;
+				case 0x0006:
+					if(chip.old_flag){
+						chip.registers[X] = chip.registers[Y];
+					}
+					// shift VX one bit to the right
+					// stored shifted bit in VF
+					chip.registers[0xF] = chip.registers[X] & 1;
+					chip.registers[X] >> 1;
+					break;
+				case 0x0007:
+					// set VX to VY - VX
+					chip.registers[X] = chip.registers[Y] - chip.registers[X];
+					break;
+				case 0x000E:
+					if(chip.old_flag){
+						chip.registers[X] = chip.registers[Y];
+					}
+					// shift VX one bit to the left
+					// store shifted bit in VF
+					chip.registers[0xF] = (chip.registers[X] >> 7) & 1;
+					chip.registers[X] << 1;
+					break;
+				default:
+					// jump with offset
+					if(chip.old_flag) chip.pc = NNN + chip.registers[0];
+					else chip.pc = NNN + chip.registers[X];
+					break;
+			}
 			break;
 		case 0x9000:
+			// skip instruction if register VX != register VY
+			if(chip.registers[X] != chip.registers[Y])
+				chip.pc += 2;
 			break;
 		case 0xA000:
 			// set index
-			chip.index = tripleN;
+			chip.index = NNN;
 			break;
 		case 0xB000:
 			break;
 		case 0xC000:
+			// store random number in VX
+			chip.registers[X] = (rand() % NN) & NN;
 			break;
 		case 0xD000:
 			// display/draw
-			int16_t x = chip.registers[secondN];
-			int16_t y = chip.registers[thirdN];
-			int16_t height = fourthN;
+			int16_t x = chip.registers[X];
+			int16_t y = chip.registers[Y];
+			int16_t height = N;
 			int8_t pixel;
 			
 			chip.registers[0xF] = 0;
@@ -202,8 +290,63 @@ void decode_instruction(){
 			chip.draw_flag = 1;	
 			break;
 		case 0xE000:
+			switch(0x000F & chip.op_code){
+				case 0x000E:
+					// skip if VX key is pressed
+					break;
+				case 0x0001:
+					// skip if VX key is not pressed
+					break;
+			}
 			break;
 		case 0xF000:
+			switch(0x00FF & chip.op_code){
+				case 0x0007:
+					// set VX to delay timer
+					chip.registers[X] = chip.delay;
+					break;
+				case 0x0015:
+					// set delay timer to VX
+					chip.delay = chip.registers[X];
+					break;
+				case 0x0018:
+					// set sound timer to VX
+					chip.sound = chip.registers[X];
+					break;
+				case 0x001E:
+					// add VX to index
+					chip.index += chip.registers[X];
+					break;
+				case 0x000A:
+					// the instructions blocks until a key is pressed
+					// decrease pc 
+					// store key value in vX
+					break;
+				case 0x0029:
+					// set index to font address of hexadecimal character in VX
+					chip.index = chip.registers[X] * 5; 	
+					break;
+				case 0x0033:
+					// store the 3 digits from VX in memory pointed by index
+					chip.memory[chip.index+2] = chip.registers[X] % 10;
+					chip.memory[chip.index+1] = (chip.registers[X] / 10) % 10;
+					chip.memory[chip.index] = (chip.registers[X] / 100) % 10;
+					break;
+				case 0x0055:
+					// store register V0 to VX (inclusive) in memory
+					for(int i = 0; i <= X; i++){
+						chip.memory[chip.index + i] = chip.registers[i];
+					}
+					if(chip.old_flag) chip.index += X + 1;
+					break;
+				case 0x0065:
+					// load values from memory into registers V0 to VX (inclusive)
+					for(int i = 0; i <= X; i++){
+						chip.registers[i] = chip.memory[chip.index + i];
+					}
+					if(chip.old_flag) chip.index += X + 1;
+					break;
+			}
 			break;
 		default:
 			break;
