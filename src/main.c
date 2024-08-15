@@ -21,6 +21,7 @@ int main(int argc, char* argv[]){
 	}
 
 	// get CHIP version (8 or 48)
+	// handles "ambiguous" instructions
 	chip.old_flag = !strcmp("8", argv[2]);
 
 	// read ROM data into memory
@@ -153,6 +154,7 @@ void decode_instruction(){
 	// 12 bit address
 	uint16_t NNN = 0x0FFF & chip.op_code;
 
+	uint8_t oldX, oldY;
 	switch(0xF000 & chip.op_code){
 		case 0x0000:
 			switch(0x00FF & chip.op_code){
@@ -221,33 +223,61 @@ void decode_instruction(){
 					break;
 				case 0x0004:
 					// set VX to VX + VY
+					oldX = chip.registers[X];
 					chip.registers[X] += chip.registers[Y];
+					
+					// if the addition overflows, set VF to 1
+					if(((uint16_t) oldX + (uint16_t) chip.registers[Y]) > 0xFF)
+						chip.registers[0xF] = 1;
+					else
+						chip.registers[0xF] = 0;
+
 					break;
 				case 0x0005:
 					// set VX to VX - VY
+					oldX = chip.registers[X];
 					chip.registers[X] -= chip.registers[Y];
+
+					// if the subtraction underflows, set VF to 0
+					if(oldX < chip.registers[Y])
+						chip.registers[0xF] = 0;
+					else
+						chip.registers[0xF] = 1;
+
 					break;
 				case 0x0006:
 					if(chip.old_flag){
 						chip.registers[X] = chip.registers[Y];
 					}
 					// shift VX one bit to the right
+					oldX = chip.registers[X];
+					chip.registers[X] >>= 1;
+
 					// stored shifted bit in VF
-					chip.registers[0xF] = chip.registers[X] & 1;
-					chip.registers[X] >> 1;
+					chip.registers[0xF] = oldX & 1;
 					break;
 				case 0x0007:
 					// set VX to VY - VX
+					oldY = chip.registers[Y];
 					chip.registers[X] = chip.registers[Y] - chip.registers[X];
+					
+					// if the subtraction underflows, set VF to 0
+					if(oldY < chip.registers[X])
+						chip.registers[0xF] = 0;
+					else
+						chip.registers[0xF] = 1;
+
 					break;
 				case 0x000E:
 					if(chip.old_flag){
 						chip.registers[X] = chip.registers[Y];
 					}
 					// shift VX one bit to the left
+					oldX = chip.registers[X];
+					chip.registers[X] <<= 1;
+
 					// store shifted bit in VF
-					chip.registers[0xF] = (chip.registers[X] >> 7) & 1;
-					chip.registers[X] << 1;
+					chip.registers[0xF] = (oldX >> 7) & 1;
 					break;
 				default:
 					// jump with offset
