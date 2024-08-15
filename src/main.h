@@ -19,22 +19,22 @@
 
 // data structures
 struct Chip8{
-        int8_t memory[4096];
-	int8_t display[ROWS * COLUMNS];
-	int16_t pc;
-	int16_t index; 
-	int16_t stack[16];
-	int8_t stack_pointer;
-	int8_t delay;
-	int8_t sound;
-	int8_t registers[16];
-	int16_t op_code;
-	int8_t draw_flag;
-	int8_t old_flag;
+        uint8_t memory[4096];
+	uint8_t display[ROWS * COLUMNS];
+	uint16_t pc;
+	uint16_t index; 
+	uint16_t stack[16];
+	uint8_t stack_pointer;
+	uint8_t delay;
+	uint8_t sound;
+	uint8_t registers[16];
+	uint16_t op_code;
+	uint8_t draw_flag;
+	uint8_t old_flag;
 };
 
 // constants
-const int8_t fontset[FONT_SIZE] = {
+const uint8_t fontset[FONT_SIZE] = {
 	0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
 	0x20, 0x60, 0x20, 0x20, 0x70, // 1
 	0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2

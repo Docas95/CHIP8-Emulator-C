@@ -21,7 +21,7 @@ int main(int argc, char* argv[]){
 	}
 
 	// get CHIP version (8 or 48)
-	chip.old_flag = strcmp("8", argv[2]);
+	chip.old_flag = !strcmp("8", argv[2]);
 
 	// read ROM data into memory
 	load_ROM(argv[1]);
@@ -31,6 +31,7 @@ int main(int argc, char* argv[]){
 	init_SDL();
 
 	// emulator main loop
+	int i = 0;
 	while(1){
 		// fetch intruction
 		fetch_instruction();
@@ -48,7 +49,9 @@ int main(int argc, char* argv[]){
 		// TO-DO
 
 		// delay to emulate CHIP8 internal clock
-		SDL_Delay(5);
+		SDL_Delay(1);
+		i++;
+		if(i > 1200) break;
 	}
 
 	// close SDL
@@ -59,7 +62,7 @@ int main(int argc, char* argv[]){
 // set up CHIP8 data
 void init_chip(){
 	// import fontset to memory
-	for(int i = FONT_START_ADDRESS; i < FONT_SIZE; i++){
+	for(uint i = FONT_START_ADDRESS; i < FONT_SIZE; i++){
 		chip.memory[i] = fontset[i];	
 	}
 
@@ -140,15 +143,15 @@ void fetch_instruction(){
 // decode and execute instruction from given opcode
 void decode_instruction(){
 	// register
-	int16_t X = (0x0F00 & chip.op_code) >> 8;
+	uint16_t X = (0x0F00 & chip.op_code) >> 8;
 	// register
-	int16_t Y = (0x00F0 & chip.op_code) >> 4;
+	uint16_t Y = (0x00F0 & chip.op_code) >> 4;
 	// 4 bit num
-	int16_t N = 0x000F & chip.op_code;
+	uint16_t N = 0x000F & chip.op_code;
 	// 8 bit num
-	int16_t NN = 0x00FF & chip.op_code;
+	uint16_t NN = 0x00FF & chip.op_code;
 	// 12 bit address
-	int16_t NNN = 0x0FFF & chip.op_code;
+	uint16_t NNN = 0x0FFF & chip.op_code;
 
 	switch(0xF000 & chip.op_code){
 		case 0x0000:
@@ -192,11 +195,11 @@ void decode_instruction(){
 			break;
 		case 0x6000:
 			// set VX register 
-			chip.registers[X] = (int8_t) NN;
+			chip.registers[X] = (uint8_t) NN;
 			break;
 		case 0x7000:
 			// add value to register VX
-			chip.registers[X] += (int8_t) NN;
+			chip.registers[X] += (uint8_t) NN;
 			break;
 		case 0x8000:
 			switch(0x000F & chip.op_code){
@@ -268,17 +271,17 @@ void decode_instruction(){
 			// store random number in VX
 			chip.registers[X] = (rand() % NN) & NN;
 			break;
-		case 0xD000:
+		case 0xD000:{
 			// display/draw
-			int16_t x = chip.registers[X];
-			int16_t y = chip.registers[Y];
-			int16_t height = N;
-			int8_t pixel;
+			uint16_t x = chip.registers[X];
+			uint16_t y = chip.registers[Y];
+			uint16_t height = N;
+			uint8_t pixel;
 			
 			chip.registers[0xF] = 0;
-			for(int row = 0; row < height; row++){
+			for(uint row = 0; row < height; row++){
 				pixel = chip.memory[chip.index + row];
-				for(int col = 0; col < 8; col++){
+				for(uint col = 0; col < 8; col++){
 					if((pixel & (0x80 >> col)) != 0){
 						if(chip.display[(x + col + ((y + row) * 64))] == 1){
 							chip.registers[0xF] = 1;
@@ -287,15 +290,18 @@ void decode_instruction(){
 					}
 				}
 			}
-			chip.draw_flag = 1;	
+			chip.draw_flag = 1;
+			}	
 			break;
 		case 0xE000:
 			switch(0x000F & chip.op_code){
 				case 0x000E:
 					// skip if VX key is pressed
+					//chip.pc += 2;
 					break;
 				case 0x0001:
 					// skip if VX key is not pressed
+					//chip.pc += 2;
 					break;
 			}
 			break;
@@ -334,14 +340,14 @@ void decode_instruction(){
 					break;
 				case 0x0055:
 					// store register V0 to VX (inclusive) in memory
-					for(int i = 0; i <= X; i++){
+					for(uint i = 0; i <= X; i++){
 						chip.memory[chip.index + i] = chip.registers[i];
 					}
 					if(chip.old_flag) chip.index += X + 1;
 					break;
 				case 0x0065:
 					// load values from memory into registers V0 to VX (inclusive)
-					for(int i = 0; i <= X; i++){
+					for(uint i = 0; i <= X; i++){
 						chip.registers[i] = chip.memory[chip.index + i];
 					}
 					if(chip.old_flag) chip.index += X + 1;
