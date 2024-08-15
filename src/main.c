@@ -11,7 +11,7 @@ SDL_Rect square;
 
 int main(int argc, char* argv[]){
 	
-	if(argc == 3){
+	if(argc == 2){
 		// set up CHIP8 data
 		init_chip();
 		srand(time(NULL));	
@@ -19,10 +19,6 @@ int main(int argc, char* argv[]){
 		printf("Correct program usage: ./Chip8 <rom_file> <version (8/48)>\n");
 		exit(1);
 	}
-
-	// get CHIP version (8 or 48)
-	// handles "ambiguous" instructions
-	chip.old_flag = !strcmp("8", argv[2]);
 
 	// read ROM data into memory
 	load_ROM(argv[1]);
@@ -32,8 +28,7 @@ int main(int argc, char* argv[]){
 	init_SDL();
 
 	// emulator main loop
-	int i = 0;
-	while(1){
+	while(chip.keypress != QUIT){
 		// fetch intruction
 		fetch_instruction();
 
@@ -47,12 +42,10 @@ int main(int argc, char* argv[]){
 		}
 
 		// get user input
-		// TO-DO
+		get_user_input();
 
 		// delay to emulate CHIP8 internal clock
 		SDL_Delay(1);
-		i++;
-		if(i > 1200) break;
 	}
 
 	// close SDL
@@ -75,6 +68,8 @@ void init_chip(){
 
 	// point stack pointer to bottom of stack
 	chip.stack_pointer = 0;
+
+	chip.keypress = NO_KEYPRESS;
 }
 
 // load content from ROM into memory
@@ -246,9 +241,6 @@ void decode_instruction(){
 
 					break;
 				case 0x0006:
-					if(chip.old_flag){
-						chip.registers[X] = chip.registers[Y];
-					}
 					// shift VX one bit to the right
 					oldX = chip.registers[X];
 					chip.registers[X] >>= 1;
@@ -269,9 +261,6 @@ void decode_instruction(){
 
 					break;
 				case 0x000E:
-					if(chip.old_flag){
-						chip.registers[X] = chip.registers[Y];
-					}
 					// shift VX one bit to the left
 					oldX = chip.registers[X];
 					chip.registers[X] <<= 1;
@@ -281,8 +270,7 @@ void decode_instruction(){
 					break;
 				default:
 					// jump with offset
-					if(chip.old_flag) chip.pc = NNN + chip.registers[0];
-					else chip.pc = NNN + chip.registers[X];
+					chip.pc = NNN + chip.registers[X];
 					break;
 			}
 			break;
@@ -327,11 +315,13 @@ void decode_instruction(){
 			switch(0x000F & chip.op_code){
 				case 0x000E:
 					// skip if VX key is pressed
-					//chip.pc += 2;
+					if(chip.keypress == chip.registers[X])
+						chip.pc += 2;
 					break;
 				case 0x0001:
 					// skip if VX key is not pressed
-					//chip.pc += 2;
+					if(chip.keypress != chip.registers[X])
+						chip.pc += 2;
 					break;
 			}
 			break;
@@ -355,8 +345,10 @@ void decode_instruction(){
 					break;
 				case 0x000A:
 					// the instructions blocks until a key is pressed
-					// decrease pc 
-					// store key value in vX
+					if(chip.keypress == NO_KEYPRESS)
+						chip.pc -= 2;
+					else
+						chip.registers[X] = chip.keypress;
 					break;
 				case 0x0029:
 					// set index to font address of hexadecimal character in VX
@@ -373,14 +365,12 @@ void decode_instruction(){
 					for(uint i = 0; i <= X; i++){
 						chip.memory[chip.index + i] = chip.registers[i];
 					}
-					if(chip.old_flag) chip.index += X + 1;
 					break;
 				case 0x0065:
 					// load values from memory into registers V0 to VX (inclusive)
 					for(uint i = 0; i <= X; i++){
 						chip.registers[i] = chip.memory[chip.index + i];
 					}
-					if(chip.old_flag) chip.index += X + 1;
 					break;
 			}
 			break;
@@ -403,4 +393,72 @@ void draw(){
 		}
 	}
 	SDL_RenderPresent(renderer);
+}
+
+void get_user_input(){
+	SDL_Event e;
+	SDL_Keycode keycode;
+	while(SDL_PollEvent(&e) != 0){
+		if(e.type == SDL_KEYDOWN){
+			keycode = e.key.keysym.sym;
+
+			switch(keycode){
+				case SDLK_1:
+					chip.keypress = 0x1;
+					break;
+				case SDLK_2:
+					chip.keypress = 0x2;
+					break;
+				case SDLK_3:
+					chip.keypress = 0x3;
+					break;
+				case SDLK_4:
+					chip.keypress = 0xC;
+					break;
+				case SDLK_q:
+					chip.keypress = 0x4;
+					break;
+				case SDLK_w:
+					chip.keypress = 0x5;
+					break;
+				case SDLK_e:
+					chip.keypress = 0x6;
+					break;
+				case SDLK_r:
+					chip.keypress = 0xD;
+					break;
+				case SDLK_a:
+					chip.keypress = 0x7;
+					break;
+				case SDLK_s:
+					chip.keypress = 0x8;
+					break;
+				case SDLK_d:
+					chip.keypress = 0x9;
+					break;
+				case SDLK_f:
+					chip.keypress = 0xE;
+					break;
+				case SDLK_z:
+					chip.keypress = 0xA;
+					break;
+				case SDLK_x:
+					chip.keypress = 0x0;
+					break;
+				case SDLK_c:
+					chip.keypress = 0xB;
+					break;
+				case SDLK_v:
+					chip.keypress = 0xF;
+					break;
+				case SDLK_ESCAPE:
+					chip.keypress = QUIT;
+					break;
+				default:
+					chip.keypress = NO_KEYPRESS;
+			}
+
+			printf("Key pressed %0x\n", chip.keypress);
+		}
+	}
 }

@@ -16,6 +16,8 @@
 #define ROWS 32
 #define COLUMNS 64
 #define ROM_START_ADDRESS 0x200
+#define NO_KEYPRESS 255
+#define QUIT 254
 
 // data structures
 struct Chip8{
@@ -30,7 +32,7 @@ struct Chip8{
 	uint8_t registers[16];
 	uint16_t op_code;
 	uint8_t draw_flag;
-	uint8_t old_flag;
+	uint8_t keypress;
 };
 
 // constants
@@ -61,4 +63,5 @@ void quit_SDL();
 void fetch_instruction();
 void decode_instruction();
 void draw();
+void get_user_input();
 #endif
