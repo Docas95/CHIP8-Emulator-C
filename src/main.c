@@ -27,25 +27,35 @@ int main(int argc, char* argv[]){
 	//set up SDL
 	init_SDL();
 
+	int i;
 	// emulator main loop
 	while(chip.keypress != QUIT){
-		// fetch intruction
-		fetch_instruction();
+		// get user input
+		get_user_input();
 
-		// decode and execute instruction
-		decode_instruction();
-			
+		// decrement timers
+		if(chip.delay > 0) chip.delay--;
+		if(chip.sound > 0) chip.sound--;
+
+		// decode 11 instructions
+		i = 0;
+		while(i < 11){
+			// fetch intruction
+			fetch_instruction();
+
+			// decode and execute instruction
+			decode_instruction();
+			i++;
+		}
+
 		// draw on screen		
 		if(chip.draw_flag){
 			draw();
 			chip.draw_flag = 0;
 		}
 
-		// get user input
-		get_user_input();
-
 		// delay to emulate CHIP8 internal clock
-		SDL_Delay(1);
+		SDL_Delay(16);
 	}
 
 	// close SDL
@@ -63,13 +73,18 @@ void init_chip(){
 	// place program counter at first ROM intruction
 	chip.pc = ROM_START_ADDRESS;
 
-	// set draw flag
+	// set flags
 	chip.draw_flag = 0;
+	chip.input_flag = 0;
 
 	// point stack pointer to bottom of stack
 	chip.stack_pointer = 0;
 
+	// no key is pressed by default
 	chip.keypress = NO_KEYPRESS;
+
+	chip.delay = 0;
+	chip.sound = 0;
 }
 
 // load content from ROM into memory
@@ -155,7 +170,7 @@ void decode_instruction(){
 			switch(0x00FF & chip.op_code){
 				case 0x00E0:
 					// clear screen
-					memset(chip.display, 0, COLUMNS);
+					memset(chip.display, 0, COLUMNS * ROWS);
 					chip.draw_flag = 1;
 				break;
 				case 0x00EE:
@@ -344,11 +359,16 @@ void decode_instruction(){
 					chip.index += chip.registers[X];
 					break;
 				case 0x000A:
-					// the instructions blocks until a key is pressed
-					if(chip.keypress == NO_KEYPRESS)
+					// wait for keypress
+					if(chip.keypress == NO_KEYPRESS){
 						chip.pc -= 2;
-					else
+						chip.input_flag = 1;
+					}
+					else{
 						chip.registers[X] = chip.keypress;
+						chip.input_flag = 0;
+						chip.keypress = NO_KEYPRESS;
+					}
 					break;
 				case 0x0029:
 					// set index to font address of hexadecimal character in VX
@@ -387,7 +407,7 @@ void draw(){
 			if(chip.display[y * 64 + x]){
 				SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
 			} else {
-				SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
+				SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
 			} 
 			SDL_RenderFillRect(renderer, &square);
 		}
@@ -399,66 +419,67 @@ void get_user_input(){
 	SDL_Event e;
 	SDL_Keycode keycode;
 	while(SDL_PollEvent(&e) != 0){
-		if(e.type == SDL_KEYDOWN){
-			keycode = e.key.keysym.sym;
+		keycode = e.key.keysym.sym;
 
-			switch(keycode){
-				case SDLK_1:
-					chip.keypress = 0x1;
-					break;
-				case SDLK_2:
-					chip.keypress = 0x2;
-					break;
-				case SDLK_3:
-					chip.keypress = 0x3;
-					break;
-				case SDLK_4:
-					chip.keypress = 0xC;
-					break;
-				case SDLK_q:
-					chip.keypress = 0x4;
-					break;
-				case SDLK_w:
-					chip.keypress = 0x5;
-					break;
-				case SDLK_e:
-					chip.keypress = 0x6;
-					break;
-				case SDLK_r:
-					chip.keypress = 0xD;
-					break;
-				case SDLK_a:
-					chip.keypress = 0x7;
-					break;
-				case SDLK_s:
-					chip.keypress = 0x8;
-					break;
-				case SDLK_d:
-					chip.keypress = 0x9;
-					break;
-				case SDLK_f:
-					chip.keypress = 0xE;
-					break;
-				case SDLK_z:
-					chip.keypress = 0xA;
-					break;
-				case SDLK_x:
-					chip.keypress = 0x0;
-					break;
-				case SDLK_c:
-					chip.keypress = 0xB;
-					break;
-				case SDLK_v:
-					chip.keypress = 0xF;
-					break;
-				case SDLK_ESCAPE:
-					chip.keypress = QUIT;
-					break;
-				default:
-					chip.keypress = NO_KEYPRESS;
-			}
-
-			printf("Key pressed %0x\n", chip.keypress);
+		switch(e.type){
+			case(SDL_KEYDOWN):
+				switch(keycode){
+						case SDLK_1:
+							chip.keypress = 0x1;
+							return;
+						case SDLK_2:
+							chip.keypress = 0x2;
+							return;
+						case SDLK_3:
+							chip.keypress = 0x3;
+							return;
+						case SDLK_4:
+							chip.keypress = 0xC;
+							return;
+						case SDLK_q:
+							chip.keypress = 0x4;
+							return;
+						case SDLK_w:
+							chip.keypress = 0x5;
+							return;
+						case SDLK_e:
+							chip.keypress = 0x6;
+							return;
+						case SDLK_r:
+							chip.keypress = 0xD;
+							return;
+						case SDLK_a:
+							chip.keypress = 0x7;
+							return;
+						case SDLK_s:
+							chip.keypress = 0x8;
+							return;
+						case SDLK_d:
+							chip.keypress = 0x9;
+							return;
+						case SDLK_f:
+							chip.keypress = 0xE;
+							return;
+						case SDLK_z:
+							chip.keypress = 0xA;
+							return;
+						case SDLK_x:
+							chip.keypress = 0x0;
+							return;
+						case SDLK_c:
+							chip.keypress = 0xB;
+							return;
+						case SDLK_v:
+							chip.keypress = 0xF;
+							return;
+						case SDLK_ESCAPE:
+							chip.keypress = QUIT;
+							return;
+				}
+				break;
+			case(SDL_KEYUP):
+				chip.keypress = NO_KEYPRESS;
+				break;
 		}
 	}
 }

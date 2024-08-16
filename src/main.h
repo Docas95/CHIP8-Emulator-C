@@ -32,6 +32,7 @@ struct Chip8{
 	uint8_t registers[16];
 	uint16_t op_code;
 	uint8_t draw_flag;
+	uint8_t input_flag;
 	uint8_t keypress;
 };
 
