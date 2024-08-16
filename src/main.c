@@ -60,7 +60,6 @@ int main(int argc, char* argv[]){
 		// play sound
 		if(chip.sound){
 			Mix_PlayMusic(sound, 1);
-			printf("EEE\n");
 		}
 
 		// draw on screen		
@@ -80,8 +79,8 @@ int main(int argc, char* argv[]){
 // set up CHIP8 data
 void init_chip(){
 	// import fontset to memory
-	for(uint i = FONT_START_ADDRESS; i < FONT_SIZE; i++){
-		chip.memory[i] = fontset[i];	
+	for(uint i = 0; i < FONT_SIZE; i++){
+		chip.memory[i + FONT_START_ADDRESS] = fontset[i];	
 	}
 
 	// place program counter at first ROM intruction
@@ -174,7 +173,7 @@ void quit_SDL(){
 // fetch current instruction
 void fetch_instruction(){
 	chip.op_code = 0;
-	chip.op_code = chip.memory[chip.pc] << 8 | chip.memory[chip.pc+1];
+	chip.op_code = chip.memory[chip.pc % MEM_SIZE] << 8 | chip.memory[(chip.pc+1) % MEM_SIZE];
 	chip.pc+=2;	
 }
 
@@ -347,10 +346,10 @@ void decode_instruction(){
 			
 			chip.registers[0xF] = 0;
 			for(uint row = 0; row < height; row++){
-				pixel = chip.memory[chip.index + row];
-				if(y + row > ROWS) break;
+				pixel = chip.memory[(chip.index + row) % MEM_SIZE];
+				if(y + row >= ROWS) break;
 				for(uint col = 0; col < 8; col++){
-					if(x + col > COLUMNS) break;
+					if(x + col >= COLUMNS) break;
 					
 					if((pixel & (0x80 >> col)) != 0){
 						if(chip.display[(x + col + ((y + row) * 64))] == 1){
@@ -367,12 +366,12 @@ void decode_instruction(){
 			switch(0x000F & chip.op_code){
 				case 0x000E:
 					// skip if VX key is pressed
-					if(chip.input[chip.registers[X]])
+					if(chip.input[chip.registers[X] & 0xF])
 						chip.pc += 2;
 					break;
 				case 0x0001:
 					// skip if VX key is not pressed
-					if(!chip.input[chip.registers[X]])
+					if(!chip.input[chip.registers[X] & 0xF])
 						chip.pc += 2;
 					break;
 			}
@@ -414,25 +413,25 @@ void decode_instruction(){
 				    break;
 				case 0x0029:
 					// set index to font address of hexadecimal character in VX
-					chip.index = chip.registers[X] * 5; 	
+					chip.index = FONT_START_ADDRESS + ((chip.registers[X] & 0xF) * 5); 	
 					break;
 				case 0x0033:
 					// store the 3 digits from VX in memory pointed by index
-					chip.memory[chip.index+2] = chip.registers[X] % 10;
-					chip.memory[chip.index+1] = (chip.registers[X] / 10) % 10;
-					chip.memory[chip.index] = (chip.registers[X] / 100) % 10;
+					chip.memory[(chip.index+2) % MEM_SIZE] = chip.registers[X] % 10;
+					chip.memory[(chip.index+1) % MEM_SIZE] = (chip.registers[X] / 10) % 10;
+					chip.memory[chip.index % MEM_SIZE] = (chip.registers[X] / 100) % 10;
 					break;
 				case 0x0055:
 					// store register V0 to VX (inclusive) in memory
 					for(uint i = 0; i <= X; i++){
-						chip.memory[chip.index] = chip.registers[i];
+						chip.memory[chip.index % MEM_SIZE] = chip.registers[i];
 						chip.index++;
 					}
 					break;
 				case 0x0065:
 					// load values from memory into registers V0 to VX (inclusive)
 					for(uint i = 0; i <= X; i++){
-						chip.registers[i] = chip.memory[chip.index];
+						chip.registers[i] = chip.memory[chip.index % MEM_SIZE];
 						chip.index++;
 					}
 					break;

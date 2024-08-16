@@ -10,6 +10,7 @@
 #include <time.h>
 
 // macros
+#define MEM_SIZE 4096
 #define FONT_SIZE 80
 #define FONT_START_ADDRESS 0x50
 #define SCREEN_WIDTH 640
@@ -23,7 +24,7 @@
 
 // data structures
 struct Chip8{
-        uint8_t memory[4096];
+        uint8_t memory[MEM_SIZE];
 	uint8_t display[ROWS * COLUMNS];
 	uint16_t pc;
 	uint16_t index; 
