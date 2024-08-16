@@ -37,6 +37,7 @@ The original CHIP 8 uses the following controls:
 A | 0 | B | F
 
 These are the equivalente controls for a QWERTY keyboard for this emulator:
+
 1 | 2 | 3 | 4
 
 Q | W | E | R
