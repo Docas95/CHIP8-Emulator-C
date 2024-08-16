@@ -30,6 +30,7 @@ int main(int argc, char* argv[]){
 	int i;
 	// emulator main loop
 	while(!chip.input[QUIT]){
+
 		// get user input
 		get_user_input();
 
@@ -43,6 +44,13 @@ int main(int argc, char* argv[]){
 			// fetch intruction
 			fetch_instruction();
 
+			// limit drawing instructions to one per frame
+			if((chip.op_code & 0xF000) == 0xD000 && chip.draw_wait){
+				chip.pc -= 2;
+				chip.draw_wait = 0;
+				break;
+			}
+
 			// decode and execute instruction
 			decode_instruction();
 			i++;
@@ -53,7 +61,6 @@ int main(int argc, char* argv[]){
 			draw();
 			chip.draw_flag = 0;
 		}
-
 		// delay to emulate CHIP8 internal clock
 		SDL_Delay(16);
 	}
@@ -171,7 +178,7 @@ void decode_instruction(){
 			switch(0x00FF & chip.op_code){
 				case 0x00E0:
 					// clear screen
-					memset(chip.display, 0, COLUMNS * ROWS);
+					memset(chip.display, 0, COLUMNS * ROWS - 1);
 					chip.draw_flag = 1;
 				break;
 				case 0x00EE:
@@ -223,14 +230,17 @@ void decode_instruction(){
 				case 0x0001:
 					// set VX to VX OR VY
 					chip.registers[X] |= chip.registers[Y];
+					chip.registers[0xF] = 0;
 					break;
 				case 0x0002:
 					// set VX to VX AND VY
 					chip.registers[X] &= chip.registers[Y];
+					chip.registers[0xF] = 0;
 					break;
 				case 0x0003:
 					// set VX to VX XOR VY
 					chip.registers[X] ^= chip.registers[Y];
+					chip.registers[0xF] = 0;
 					break;
 				case 0x0004:
 					// set VX to VX + VY
@@ -258,6 +268,7 @@ void decode_instruction(){
 					break;
 				case 0x0006:
 					// shift VX one bit to the right
+					chip.registers[X] = chip.registers[Y];
 					oldX = chip.registers[X];
 					chip.registers[X] >>= 1;
 
@@ -278,6 +289,7 @@ void decode_instruction(){
 					break;
 				case 0x000E:
 					// shift VX one bit to the left
+					chip.registers[X] = chip.registers[Y];
 					oldX = chip.registers[X];
 					chip.registers[X] <<= 1;
 
@@ -300,6 +312,7 @@ void decode_instruction(){
 			chip.index = NNN;
 			break;
 		case 0xB000:
+			chip.pc = NNN + chip.registers[0x0];
 			break;
 		case 0xC000:
 			// store random number in VX
@@ -307,15 +320,19 @@ void decode_instruction(){
 			break;
 		case 0xD000:{
 			// display/draw
-			uint16_t x = chip.registers[X];
-			uint16_t y = chip.registers[Y];
+			chip.draw_wait = 1;
+			uint16_t x = chip.registers[X] % 64;
+			uint16_t y = chip.registers[Y] % 32;
 			uint16_t height = N;
 			uint8_t pixel;
 			
 			chip.registers[0xF] = 0;
 			for(uint row = 0; row < height; row++){
 				pixel = chip.memory[chip.index + row];
+				if(y + row > ROWS) break;
 				for(uint col = 0; col < 8; col++){
+					if(x + col > COLUMNS) break;
+					
 					if((pixel & (0x80 >> col)) != 0){
 						if(chip.display[(x + col + ((y + row) * 64))] == 1){
 							chip.registers[0xF] = 1;
@@ -389,13 +406,15 @@ void decode_instruction(){
 				case 0x0055:
 					// store register V0 to VX (inclusive) in memory
 					for(uint i = 0; i <= X; i++){
-						chip.memory[chip.index + i] = chip.registers[i];
+						chip.memory[chip.index] = chip.registers[i];
+						chip.index++;
 					}
 					break;
 				case 0x0065:
 					// load values from memory into registers V0 to VX (inclusive)
 					for(uint i = 0; i <= X; i++){
-						chip.registers[i] = chip.memory[chip.index + i];
+						chip.registers[i] = chip.memory[chip.index];
+						chip.index++;
 					}
 					break;
 			}
