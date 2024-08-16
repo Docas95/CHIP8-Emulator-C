@@ -29,7 +29,7 @@ int main(int argc, char* argv[]){
 
 	int i;
 	// emulator main loop
-	while(chip.keypress != QUIT){
+	while(!chip.input[QUIT]){
 		// get user input
 		get_user_input();
 
@@ -75,13 +75,14 @@ void init_chip(){
 
 	// set flags
 	chip.draw_flag = 0;
-	chip.input_flag = 0;
 
 	// point stack pointer to bottom of stack
 	chip.stack_pointer = 0;
 
 	// no key is pressed by default
-	chip.keypress = NO_KEYPRESS;
+	for(int i = 0; i < 16; i++){
+		chip.input[i] = 0;
+	}
 
 	chip.delay = 0;
 	chip.sound = 0;
@@ -330,12 +331,12 @@ void decode_instruction(){
 			switch(0x000F & chip.op_code){
 				case 0x000E:
 					// skip if VX key is pressed
-					if(chip.keypress == chip.registers[X])
+					if(chip.input[chip.registers[X]])
 						chip.pc += 2;
 					break;
 				case 0x0001:
 					// skip if VX key is not pressed
-					if(chip.keypress != chip.registers[X])
+					if(!chip.input[chip.registers[X]])
 						chip.pc += 2;
 					break;
 			}
@@ -360,16 +361,21 @@ void decode_instruction(){
 					break;
 				case 0x000A:
 					// wait for keypress
-					if(chip.keypress == NO_KEYPRESS){
-						chip.pc -= 2;
-						chip.input_flag = 1;
-					}
-					else{
-						chip.registers[X] = chip.keypress;
-						chip.input_flag = 0;
-						chip.keypress = NO_KEYPRESS;
-					}
-					break;
+				    {
+				        int key_found = 0;
+				        for(int i = 0; i < 16; i++) {
+				            if(chip.input[i] != 0) {
+				                chip.registers[X] = i;
+				                chip.input[i] = 0;
+				                key_found = 1;
+				                break;
+				            }
+				        }
+				        if(!key_found) {
+				            chip.pc -= 2;
+				        }
+				    }
+				    break;
 				case 0x0029:
 					// set index to font address of hexadecimal character in VX
 					chip.index = chip.registers[X] * 5; 	
@@ -416,70 +422,122 @@ void draw(){
 }
 
 void get_user_input(){
-	SDL_Event e;
-	SDL_Keycode keycode;
-	while(SDL_PollEvent(&e) != 0){
-		keycode = e.key.keysym.sym;
+    SDL_Event e;
+    SDL_Keycode keycode;
+    while(SDL_PollEvent(&e) != 0){
+        keycode = e.key.keysym.sym;
 
-		switch(e.type){
-			case(SDL_KEYDOWN):
-				switch(keycode){
-						case SDLK_1:
-							chip.keypress = 0x1;
-							return;
-						case SDLK_2:
-							chip.keypress = 0x2;
-							return;
-						case SDLK_3:
-							chip.keypress = 0x3;
-							return;
-						case SDLK_4:
-							chip.keypress = 0xC;
-							return;
-						case SDLK_q:
-							chip.keypress = 0x4;
-							return;
-						case SDLK_w:
-							chip.keypress = 0x5;
-							return;
-						case SDLK_e:
-							chip.keypress = 0x6;
-							return;
-						case SDLK_r:
-							chip.keypress = 0xD;
-							return;
-						case SDLK_a:
-							chip.keypress = 0x7;
-							return;
-						case SDLK_s:
-							chip.keypress = 0x8;
-							return;
-						case SDLK_d:
-							chip.keypress = 0x9;
-							return;
-						case SDLK_f:
-							chip.keypress = 0xE;
-							return;
-						case SDLK_z:
-							chip.keypress = 0xA;
-							return;
-						case SDLK_x:
-							chip.keypress = 0x0;
-							return;
-						case SDLK_c:
-							chip.keypress = 0xB;
-							return;
-						case SDLK_v:
-							chip.keypress = 0xF;
-							return;
-						case SDLK_ESCAPE:
-							chip.keypress = QUIT;
-							return;
-				}
-				break;
-			case(SDL_KEYUP):
-				chip.keypress = NO_KEYPRESS;
-				break;
-		}
-	}
+        switch(e.type){
+            case(SDL_KEYDOWN):
+                switch(keycode){
+                    case SDLK_1:
+                        chip.input[0x1] = 1;
+                        break;
+                    case SDLK_2:
+                        chip.input[0x2] = 1;
+                        break;
+                    case SDLK_3:
+                        chip.input[0x3] = 1;
+                        break;
+                    case SDLK_4:
+                        chip.input[0xC] = 1;
+                        break;
+                    case SDLK_q:
+                        chip.input[0x4] = 1;
+                        break;
+                    case SDLK_w:
+                        chip.input[0x5] = 1;
+                        break;
+                    case SDLK_e:
+                        chip.input[0x6] = 1;
+                        break;
+                    case SDLK_r:
+                        chip.input[0xD] = 1;
+                        break;
+                    case SDLK_a:
+                        chip.input[0x7] = 1;
+                        break;
+                    case SDLK_s:
+                        chip.input[0x8] = 1;
+                        break;
+                    case SDLK_d:
+                        chip.input[0x9] = 1;
+                        break;
+                    case SDLK_f:
+                        chip.input[0xE] = 1;
+                        break;
+                    case SDLK_z:
+                        chip.input[0xA] = 1;
+                        break;
+                    case SDLK_x:
+                        chip.input[0x0] = 1;
+                        break;
+                    case SDLK_c:
+                        chip.input[0xB] = 1;
+                        break;
+                    case SDLK_v:
+                        chip.input[0xF] = 1;
+                        break;
+                    case SDLK_ESCAPE:
+                        chip.input[QUIT] = 1; // Handle quit key
+                        break;
+                }
+                return;
+            case(SDL_KEYUP):
+                switch(keycode){
+                    case SDLK_1:
+                        chip.input[0x1] = 0;
+                        break;
+                    case SDLK_2:
+                        chip.input[0x2] = 0;
+                        break;
+                    case SDLK_3:
+                        chip.input[0x3] = 0;
+                        break;
+                    case SDLK_4:
+                        chip.input[0xC] = 0;
+                        break;
+                    case SDLK_q:
+                        chip.input[0x4] = 0;
+                        break;
+                    case SDLK_w:
+                        chip.input[0x5] = 0;
+                        break;
+                    case SDLK_e:
+                        chip.input[0x6] = 0;
+                        break;
+                    case SDLK_r:
+                        chip.input[0xD] = 0;
+                        break;
+                    case SDLK_a:
+                        chip.input[0x7] = 0;
+                        break;
+                    case SDLK_s:
+                        chip.input[0x8] = 0;
+                        break;
+                    case SDLK_d:
+                        chip.input[0x9] = 0;
+                        break;
+                    case SDLK_f:
+                        chip.input[0xE] = 0;
+                        break;
+                    case SDLK_z:
+                        chip.input[0xA] = 0;
+                        break;
+                    case SDLK_x:
+                        chip.input[0x0] = 0;
+                        break;
+                    case SDLK_c:
+                        chip.input[0xB] = 0;
+                        break;
+                    case SDLK_v:
+                        chip.input[0xF] = 0;
+                        break;
+                    case SDLK_ESCAPE:
+                        chip.input[QUIT] = 0; // Handle quit key
+                        break;
+                }
+                return;
+        }
+    }
 }
