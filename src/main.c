@@ -8,6 +8,7 @@ struct Chip8 chip;
 SDL_Window* window;
 SDL_Renderer* renderer;
 SDL_Rect square;
+Mix_Music *sound;
 
 int main(int argc, char* argv[]){
 	
@@ -54,6 +55,12 @@ int main(int argc, char* argv[]){
 			// decode and execute instruction
 			decode_instruction();
 			i++;
+		}
+
+		// play sound
+		if(chip.sound){
+			Mix_PlayMusic(sound, 1);
+			printf("EEE\n");
 		}
 
 		// draw on screen		
@@ -142,6 +149,18 @@ void init_SDL(){
 	square.x = 0;
 	square.y = 0;
 	
+	// Open audio mixer
+	if(Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0){
+		printf("SDL_mixer could not initialize! Mix_Error: %s\n", Mix_GetError());
+        exit(1);
+	}
+
+	sound = Mix_LoadMUS(AUDIO_LOCATION);
+	if(!sound){
+		printf("Failed to load music! SDL_mixer Error: %s\n", Mix_GetError());
+        exit(1);
+	}
+
 	// clear screen
 	SDL_RenderClear(renderer);
 }

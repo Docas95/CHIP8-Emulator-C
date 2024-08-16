@@ -3,6 +3,7 @@
 // includes
 
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_mixer.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -18,6 +19,7 @@
 #define ROM_START_ADDRESS 0x200
 #define NO_KEYPRESS 255
 #define QUIT 254
+#define AUDIO_LOCATION "../sound/pluck.mp3" 
 
 // data structures
 struct Chip8{

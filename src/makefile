@@ -4,7 +4,7 @@ CC = gcc
 CFLAGS = -g
 OBJS = main.o
 TARGET = Chip8
-LIBS = -lSDL2
+LIBS = -lSDL2 -lSDL2_mixer
 
 $(TARGET): $(OBJS)
 	$(CC) $(OBJS) -o $(TARGET) $(LIBS)
